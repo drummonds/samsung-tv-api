@@ -7,7 +7,6 @@ import (
 	"github.com/stephensli/samsung-tv-api/pkg/samsung-tv-api/keys"
 	"golang.org/x/net/websocket"
 	"log"
-	"net"
 	"net/url"
 	"strings"
 	"sync"
@@ -48,7 +47,6 @@ func (s *SamsungWebsocket) OpenConnection() (*ConnectionResponse, error) {
 
 	config, _ := websocket.NewConfig(u, origin)
 	config.TlsConfig = &tls.Config{InsecureSkipVerify: true}
-	config.Dialer = &net.Dialer{Timeout: time.Millisecond * 200}
 
 	ws, err := websocket.DialConfig(config)
 
@@ -62,6 +60,31 @@ func (s *SamsungWebsocket) OpenConnection() (*ConnectionResponse, error) {
 	readErr := s.readJSON(&val)
 
 	return &val, readErr
+}
+
+func (s *SamsungWebsocket) WaitFor (event string) {
+    fmt.Println("Waiting for ", event)
+    origin := "http://localhost/"
+    u := s.BaseUrl("samsung.remote.control").String()
+
+    config, _ := websocket.NewConfig(u, origin)
+    config.TlsConfig = &tls.Config{InsecureSkipVerify: true}
+
+    ws, err := websocket.DialConfig(config)
+
+    if err != nil {
+        return
+    }
+
+    for {
+		var message string
+		if err := websocket.Message.Receive(ws, &message); err != nil {
+			log.Println("Error reading message:", err)
+			break
+		}
+		// Log the received message
+		log.Println("Received message:", message)
+    }
 }
 
 // sendJSONReceiveJSON will attempt to first send the command to the websocket server (TV)
@@ -238,6 +261,25 @@ func (s *SamsungWebsocket) SendKey(key string, times int, cmd string) error {
 	return nil
 }
 
+func (s *SamsungWebsocket) SendText(text string) error {
+	log.Printf("Sending text %s via ws api\n", text)
+	var req = Request{
+		Method: "ms.remote.control",
+		Params: map[string]interface{}{
+			"Cmd":          text,
+			"DataOfCmd":    "base64",
+			"TypeOfRemote": "SendInputString",
+		},
+	}
+
+	err := s.sendJSON(req)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
 // HoldKey will command the TV to press a given key and then wait the provided
 // seconds until commanding the TV to release that given key again.
 //
