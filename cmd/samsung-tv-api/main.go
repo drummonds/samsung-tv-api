@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/stephensli/samsung-tv-api/internal/app/samsung-tv-api/helpers"
-	samsung_tv_api "github.com/stephensli/samsung-tv-api/pkg/samsung-tv-api"
+	"github.com/avbdr/samsung-tv-api/internal/app/samsung-tv-api/helpers"
+	samsung_tv_api "github.com/avbdr/samsung-tv-api/pkg/samsung-tv-api"
 	"log"
 )
 

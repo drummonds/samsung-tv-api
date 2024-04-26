@@ -3,10 +3,10 @@ package samsung_tv_api
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/stephensli/samsung-tv-api/internal/app/samsung-tv-api/wol"
-	"github.com/stephensli/samsung-tv-api/pkg/samsung-tv-api/http"
-	"github.com/stephensli/samsung-tv-api/pkg/samsung-tv-api/soap"
-	"github.com/stephensli/samsung-tv-api/pkg/samsung-tv-api/websocket"
+	"github.com/avbdr/samsung-tv-api/internal/app/samsung-tv-api/wol"
+	"github.com/avbdr/samsung-tv-api/pkg/samsung-tv-api/http"
+	"github.com/avbdr/samsung-tv-api/pkg/samsung-tv-api/soap"
+	"github.com/avbdr/samsung-tv-api/pkg/samsung-tv-api/websocket"
 	"log"
 	"net/url"
 )
