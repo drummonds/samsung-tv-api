@@ -90,8 +90,25 @@ func (s *SamsungRestClient) RunApplication(appId string) (interface{}, error) {
 
 	var output interface{}
 	err := s.makeRestRequest(fmt.Sprintf("applications/%s", appId), "post", &output)
-
-	return output, err
+	if err != nil {
+		return output, err
+	}
+	// start watchdog to make sure that app actually has started
+	i := 0
+    for {
+		if i > 10 {
+			// execute app one more time as a last resort
+			err := s.makeRestRequest(fmt.Sprintf("applications/%s", appId), "post", &output)
+			return output, err
+        }
+        appDetails, _ := s.GetApplicationStatus(appId)
+        if appDetails.Visible == true {
+            return output, err
+        }
+        log.Printf("%s", appDetails.Running, appDetails.Visible)
+        time.Sleep(2 * time.Second)
+		i++
+    }
 }
 
 // CloseApplication will tell the TV via the rest api to close a given application
