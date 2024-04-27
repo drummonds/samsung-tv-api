@@ -373,32 +373,6 @@ func (s *SamsungWebsocket) OpenBrowser(url string) error {
 	return s.RunApplication("org.tizen.browser", "NATIVE_LAUNCH", url)
 }
 
-// Power will send the keys.Power key which will attempt to turn off or on
-//
-// TODO
-// 	* This requires to be tested, it has not been ran to close any applications yet.
-func (s *SamsungWebsocket) Power() error {
-	return s.SendClick(keys.Power)
-}
-
-// PowerOff will send the keys.PowerOff key which will attempt to turn off
-// the TV if and only if its on on and a legacy TV. Otherwise, use Power Toggle.
-//
-// TODO
-// 	* This requires to be tested, it has not been ran to close any applications yet.
-func (s *SamsungWebsocket) PowerOff() error {
-	return s.SendClick(keys.PowerOff)
-}
-
-// PowerOn will send the keys.PowerOn key which will attempt to turn on
-// the TV if and only if its on standby and a legacy TV. Otherwise, use Power Toggle.
-//
-// TODO
-// 	* This requires to be tested, it has not been ran to close any applications yet.
-func (s *SamsungWebsocket) PowerOn() error {
-	return s.SendClick(keys.PowerOn)
-}
-
 func (s *SamsungWebsocket) Disconnect() error {
 	return s.conn.Close()
 }

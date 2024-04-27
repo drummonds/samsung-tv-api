@@ -6,7 +6,6 @@ import (
 	"github.com/grandcat/zeroconf"
 	"fmt"
 	"log"
-	"net"
 	"encoding/json"
 	"encoding/base64"
 	"io/ioutil"
@@ -38,21 +37,6 @@ func toMap(data []string) (map[string]string) {
 		result[parts[0]] = parts[1]
 	}
 	return result
-}
-
-func (dev *Device) isAlive () (bool) {
-	address := net.JoinHostPort(dev.Ip, "8002")
-	timeout := 800 * time.Millisecond
-
-	conn, err := net.DialTimeout("tcp", address, timeout)
-	if err != nil {
-		return false
-	}
-	if conn != nil {
-		defer conn.Close()
-		return true
-	}
-	return false
 }
 
 func zeroconfDisco() {
@@ -124,21 +108,6 @@ func loadConfig() {
 	}
 }
 
-func (tv *Device) connect () {
-	if tv.Api != nil {
-		return
-	}
-	tv.Api = samsung_tv_api.NewSamsungTvWebSocket(tv.Ip, tv.Token, 8002, 2, "RoomAI Remote",	true)
-}
-
-func (device *Device) powerOn () {
-	if device.isAlive() {
-		device.connect()
-		device.Api.Websocket.SendClick("KEY_POWER")
-	}
-	log.Printf("wol sent")
-	samsung_tv_api.WakeOnLan(device.Mac)
-}
 
 func main () {
 	var tv Device
@@ -154,7 +123,6 @@ func main () {
 		fmt.Printf("TV: %s", os.Args[2])
 	}
 	*/
-	tv = devices_[deviceId]
 
 	if os.Args[1] == "discover" {
 		zeroconfDisco()
@@ -162,15 +130,14 @@ func main () {
 		return
 	}
 
-	if os.Args[1] == "poweron" {
-		tv.powerOn()
-		for tv.isAlive() == false {
-			time.Sleep(500 * time.Millisecond)
-		}
-		return
-	}
+	tv = devices_[deviceId]
 
-	tv.connect()
+	tv.Api = samsung_tv_api.NewSamsungTvWebSocket(tv.Ip, tv.Token, 8002, 2, "RoomAI Remote", false)
+	tv.Api.Mac = tv.Mac
+	tv.Api.PowerOn()
+	tv.Api.ConnectionSetup()
+	tv.Api.Websocket.WaitFor("ms.channel.connect")
+
 	if tv.Token == "" {
 		devices_[deviceId].Token = tv.Api.GetToken()
 		deviceInfo, deviceInfoErr := tv.Api.Rest.GetDeviceInfo()
@@ -186,7 +153,7 @@ func main () {
     }
 
 	if os.Args[1] == "poweroff" {
-		tv.Api.Websocket.SendClick("KEY_POWER")
+		tv.Api.PowerOff()
 		return
 	}
 	
@@ -197,6 +164,7 @@ func main () {
 		}
 		return
 	}
+
 	if os.Args[1] == "open" {
 		if len(os.Args) != 3 {
 			log.Fatal("no key specified")
@@ -263,6 +231,7 @@ func main () {
 			fmt.Printf("error %#v", deviceInfoErr)
 		}
 		spew.Dump("%v", deviceInfo)
+		log.Printf("OS %s", deviceInfo.Device.Os)
 		return
 	}
 }

@@ -56,9 +56,11 @@ if updatedToken != "" && updatedToken != config.Token {
 
 ### Toggle Power
 ```go 
-if err := c.Websocket.Power(); err != nil {
+if err := c.PowerOn(); err != nil {
 	log.Fatalln(err)
 }
+
+c.PowerOff()
 ```
 
 ### Open Browser

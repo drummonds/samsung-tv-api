@@ -177,3 +177,30 @@ func WakeOnLan(mac string) error {
 
 	return packet.Send("255.255.255.255")
 }
+
+func (s *SamsungTvClient) IsAlive () (bool) {
+    _, deviceInfoErr := s.Rest.GetDeviceInfo()
+    if deviceInfoErr != nil {
+        return false
+    }
+    return true
+}
+
+func (s *SamsungTvClient) PowerOn () {
+    if s.IsAlive() {
+        s.ConnectionSetup()
+		// turned off TV reports volume -1
+        vol, _ := s.Upnp.GetCurrentVolume()
+        if vol == -1 {
+            s.Websocket.SendClick("KEY_POWER")
+        }
+    }
+    WakeOnLan(s.Mac)
+    for s.IsAlive() == false {
+        time.Sleep(500 * time.Millisecond)
+    }
+}
+
+func (s *SamsungTvClient) PowerOff () {
+	s.Websocket.SendClick("KEY_POWER")
+}
