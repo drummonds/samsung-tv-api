@@ -70,11 +70,16 @@ func (s *SamsungWebsocket) WaitFor (event string) {
     config, _ := websocket.NewConfig(u, origin)
     config.TlsConfig = &tls.Config{InsecureSkipVerify: true}
 
-    ws, err := websocket.DialConfig(config)
+	var ws *websocket.Conn
+	var err error
 
-    if err != nil {
-        return
-    }
+	for {
+		ws, err = websocket.DialConfig(config)
+		if err == nil {
+			break
+		}
+	}
+	defer ws.Close()
 
     for {
 		var message string
@@ -84,6 +89,9 @@ func (s *SamsungWebsocket) WaitFor (event string) {
 		}
 		// Log the received message
 		log.Println("Received message:", message)
+		if strings.Contains(message, event) {
+			return
+		}
     }
 }
 
@@ -107,7 +115,6 @@ func (s *SamsungWebsocket) sendJSONReceiveJSON(command interface{}, output inter
 	if err != nil {
 		return err
 	}
-
 	return s.readJSON(output)
 }
 
@@ -179,9 +186,15 @@ func (s *SamsungWebsocket) GetApplicationsList() (ApplicationsResponse, error) {
 		},
 	}
 
-	err := s.sendJSONReceiveJSON(req, &output)
-
-	return output, err
+	for {
+		err := s.sendJSONReceiveJSON(req, &output)
+		if err != nil {
+			return output, err
+		}
+		if output.Event == "ed.installedApp.get" {
+			return output, err
+		}
+	}
 }
 
 // RunApplication will tell the TV via the web socket api to run a given application
