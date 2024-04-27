@@ -1,4 +1,4 @@
-package soap
+package upnp
 
 type GetDeviceVolumeResponse struct {
 	Envelope struct {

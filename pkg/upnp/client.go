@@ -1,4 +1,4 @@
-package soap
+package upnp
 
 import (
 	"crypto/tls"
@@ -14,7 +14,7 @@ import (
 
 // This package covers the support for the Universal Plug & Play (UPNP)
 
-type SamsungSoapClient struct {
+type UpnpClient struct {
 	BaseUrl func(string) *url.URL
 }
 
@@ -24,7 +24,7 @@ type SamsungSoapClient struct {
 //
 // TODO
 // 	* support binding to a non 200 response or determine the error message returned and use it in the error response
-func (s *SamsungSoapClient) makeSoapRequest(action, arguments, protocol string, output interface{}) error {
+func (s *UpnpClient) makeSoapRequest(action, arguments, protocol string, output interface{}) error {
 	u := s.BaseUrl(protocol + "1").String()
 	fmt.Println(u)
 
@@ -72,7 +72,7 @@ func (s *SamsungSoapClient) makeSoapRequest(action, arguments, protocol string, 
 //
 // TODO
 // 	* This has to been tested with any bad input, should be regarded as not stable.
-func (s *SamsungSoapClient) GetCurrentVolume() (int, error) {
+func (s *UpnpClient) GetCurrentVolume() (int, error) {
 	log.Println("Get device volume via saop api")
 
 	output := GetDeviceVolumeResponse{}
@@ -89,7 +89,7 @@ func (s *SamsungSoapClient) GetCurrentVolume() (int, error) {
 //
 // TODO
 // 	* This has to been tested with any bad input, should be regarded as not stable.
-func (s *SamsungSoapClient) SetVolume(volume int) error {
+func (s *UpnpClient) SetVolume(volume int) error {
 	log.Printf("set the volume of the tv to %d via soap api\n", volume)
 
 	var output interface{}
@@ -102,7 +102,7 @@ func (s *SamsungSoapClient) SetVolume(volume int) error {
 //
 // TODO
 // 	* This has to been tested with any bad input, should be regarded as not stable.
-func (s *SamsungSoapClient) GetCurrentMuteStatus() (bool, error) {
+func (s *UpnpClient) GetCurrentMuteStatus() (bool, error) {
 	log.Println("Get device mute status via saop api")
 
 	output := GetCurrentMuteStatusResponse{}
@@ -120,7 +120,7 @@ func (s *SamsungSoapClient) GetCurrentMuteStatus() (bool, error) {
 // TODO
 // 	* This has to been tested with any bad input, should be regarded as not stable.
 // 	* This requires to be tested, it has not been ran to close any applications yet.
-func (s *SamsungSoapClient) SetCurrentMedia(url string) error {
+func (s *UpnpClient) SetCurrentMedia(url string) error {
 	args := fmt.Sprintf("<CurrentURI>%s</CurrentURI><CurrentURIMetaData></CurrentURIMetaData>", url)
 
 	var output interface{}
@@ -140,7 +140,7 @@ func (s *SamsungSoapClient) SetCurrentMedia(url string) error {
 // TODO
 // 	* This has to been tested with any bad input, should be regarded as not stable.
 // 	* This requires to be tested, it has not been ran to close any applications yet.
-func (s *SamsungSoapClient) PlayCurrentMedia() error {
+func (s *UpnpClient) PlayCurrentMedia() error {
 	var output interface{}
 	return s.makeSoapRequest("Play", "<Speed>1</Speed>", "AVTransport", &output)
 }

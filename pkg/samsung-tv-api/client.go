@@ -5,20 +5,21 @@ import (
 	"fmt"
 	"github.com/avbdr/samsung-tv-api/internal/app/samsung-tv-api/wol"
 	"github.com/avbdr/samsung-tv-api/pkg/samsung-tv-api/http"
-	"github.com/avbdr/samsung-tv-api/pkg/samsung-tv-api/soap"
+	"github.com/avbdr/samsung-tv-api/pkg/upnp"
 	"github.com/avbdr/samsung-tv-api/pkg/samsung-tv-api/websocket"
 	"log"
+	"time"
 	"net/url"
 )
 
 type SamsungTvClient struct {
 	Rest      http.SamsungRestClient
 	Websocket websocket.SamsungWebsocket
-	Upnp      soap.SamsungSoapClient
+	Upnp      upnp.UpnpClient
+	Mac           string
 
 	host          string
 	token         string
-	mac           string
 	port          int
 	keyPressDelay int
 	name          string
@@ -55,7 +56,7 @@ func NewSamsungTvWebSocket(host, token string, port, keyPressDelay int, name str
 		KeyPressDelay: keyPressDelay,
 	}
 
-	client.Upnp = soap.SamsungSoapClient{
+	client.Upnp = upnp.UpnpClient{
 		BaseUrl: func(endpoint string) *url.URL {
 			return client.formatUpnpUrl(endpoint)
 		},
