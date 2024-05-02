@@ -4,24 +4,24 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/avbdr/samsung-tv-api/internal/app/samsung-tv-api/wol"
+	"github.com/avbdr/samsung-tv-api/pkg/device"
 	samsung_http "github.com/avbdr/samsung-tv-api/pkg/samsung-tv-api/http"
 	"github.com/avbdr/samsung-tv-api/pkg/samsung-tv-api/websocket"
-	"github.com/avbdr/samsung-tv-api/pkg/device"
 	"github.com/avbdr/samsung-tv-api/pkg/upnp"
 	"log"
+	"net/url"
 	"strings"
 	"time"
-	"net/url"
 )
 
 type SamsungTvClient struct {
-	Rest      samsung_http.SamsungRestClient
-	Websocket websocket.SamsungWebsocket
-	Upnp      upnp.UpnpClient
-	port      int
-	cfg       *device.DeviceInfo
+	Rest          samsung_http.SamsungRestClient
+	Websocket     websocket.SamsungWebsocket
+	Upnp          upnp.UpnpClient
+	port          int
+	cfg           *device.DeviceInfo
 	keyPressDelay int
-	name      string
+	name          string
 }
 
 func NewSamsungTvWebSocket(cfg *device.DeviceInfo, keyPressDelay int, autoConnect bool) *SamsungTvClient {
@@ -30,7 +30,7 @@ func NewSamsungTvWebSocket(cfg *device.DeviceInfo, keyPressDelay int, autoConnec
 	}
 	client := &SamsungTvClient{
 		name:          "RoomsAI Remote",
-		cfg:		   cfg,
+		cfg:           cfg,
 		port:          8002,
 		keyPressDelay: keyPressDelay,
 	}
@@ -170,66 +170,66 @@ func WakeOnLan(mac string) error {
 	return packet.Send("255.255.255.255")
 }
 
-func (s *SamsungTvClient) IsAlive () (bool) {
-    _, deviceInfoErr := s.Rest.GetDeviceInfo()
-    if deviceInfoErr != nil {
-        return false
-    }
-    return true
+func (s *SamsungTvClient) IsAlive() bool {
+	_, deviceInfoErr := s.Rest.GetDeviceInfo()
+	if deviceInfoErr != nil {
+		return false
+	}
+	return true
 }
 
-func (s *SamsungTvClient) PowerOn () error {
-    if s.IsAlive() {
-        s.ConnectionSetup()
+func (s *SamsungTvClient) PowerOn() error {
+	if s.IsAlive() {
+		s.ConnectionSetup()
 		// turned off TV reports volume -1
-        vol, _ := s.Upnp.GetCurrentVolume()
-        if vol == -1 {
-            s.Websocket.SendClick("KEY_POWER")
-        }
-    }
+		vol, _ := s.Upnp.GetCurrentVolume()
+		if vol == -1 {
+			s.Websocket.SendClick("KEY_POWER")
+		}
+	}
 	log.Printf("wol to %s", s.cfg.Mac)
-    WakeOnLan(s.cfg.Mac)
-    for s.IsAlive() == false {
-        time.Sleep(500 * time.Millisecond)
-    }
+	WakeOnLan(s.cfg.Mac)
+	for s.IsAlive() == false {
+		time.Sleep(500 * time.Millisecond)
+	}
 	return nil
 }
 
-func (s *SamsungTvClient) PowerOff () error {
+func (s *SamsungTvClient) PowerOff() error {
 	s.Websocket.SendClick("KEY_POWER")
 	return nil
 }
 
-func Discover() ([]device.DeviceInfo) {
+func Discover() []device.DeviceInfo {
 	return upnp.Discover("urn:dial-multiscreen-org:service:dial:1", "Samsung Electronics", "samsungtv")
 }
 
 func (s *SamsungTvClient) Init() {
-    s.PowerOn()
-    s.ConnectionSetup()
-    s.Websocket.WaitFor("ms.channel.connect")
+	s.PowerOn()
+	s.ConnectionSetup()
+	s.Websocket.WaitFor("ms.channel.connect")
 	if s.cfg.Mac == "" {
 		deviceInfo, deviceInfoErr := s.Rest.GetDeviceInfo()
-        if deviceInfoErr == nil && deviceInfo.Device.NetworkType == "wireless" {
+		if deviceInfoErr == nil && deviceInfo.Device.NetworkType == "wireless" {
 			s.cfg.Mac = deviceInfo.Device.WifiMac
-        }
-    }
+		}
+	}
 }
 
 func (s *SamsungTvClient) List() error {
-    apps, _ := s.Websocket.GetApplicationsList()
-    for _, app := range apps.Data.Applications {
+	apps, _ := s.Websocket.GetApplicationsList()
+	for _, app := range apps.Data.Applications {
 		log.Printf("%s - %s", app.AppID, app.Name)
-    }
+	}
 	return nil
 }
 
 func (s *SamsungTvClient) Open(url string) error {
-    if strings.HasPrefix(url, "http") {
+	if strings.HasPrefix(url, "http") {
 		s.Websocket.OpenBrowser(url)
-    } else {
+	} else {
 		s.Rest.RunApplication(url)
-    }
+	}
 	return nil
 }
 
@@ -243,13 +243,13 @@ func (s *SamsungTvClient) VolUp() error {
 	return nil
 }
 
-func (s *SamsungTvClient) VolDown() error  {
+func (s *SamsungTvClient) VolDown() error {
 	s.Websocket.SendClick("KEY_VOLDOWN")
 	return nil
 }
 
 func (s *SamsungTvClient) Vol(vol int) (int, error) {
-	if (vol == -1) {
+	if vol == -1 {
 		vol, err := s.Upnp.GetCurrentVolume()
 		return vol, err
 	}
@@ -258,31 +258,31 @@ func (s *SamsungTvClient) Vol(vol int) (int, error) {
 }
 
 func (s *SamsungTvClient) Test() error {
-    s.Websocket.WaitFor("qwesdfsf")
+	s.Websocket.WaitFor("qwesdfsf")
 	return nil
 }
 
-func (s *SamsungTvClient) Text(text string) error  {
-    s.Websocket.SendText(base64.StdEncoding.EncodeToString([]byte(text)))
+func (s *SamsungTvClient) Text(text string) error {
+	s.Websocket.SendText(base64.StdEncoding.EncodeToString([]byte(text)))
 	return nil
 }
 
-func (s *SamsungTvClient) Stream(url string) error  {
+func (s *SamsungTvClient) Stream(url string) error {
 	s.Upnp.SetCurrentMedia(url)
 	return nil
 }
 
 func (s *SamsungTvClient) Info() (string, error) {
-    return "", nil//s.Rest.GetDeviceInfo()
+	return "", nil //s.Rest.GetDeviceInfo()
 }
 
-func (s *SamsungTvClient) Next() error  {
-    s.Upnp.PlayNext()
+func (s *SamsungTvClient) Next() error {
+	s.Upnp.PlayNext()
 	return nil
 }
 
-func (s *SamsungTvClient) Prev() error  {
-    s.Upnp.PlayPrevious()
+func (s *SamsungTvClient) Prev() error {
+	s.Upnp.PlayPrevious()
 	return nil
 }
 
@@ -291,15 +291,15 @@ func (s *SamsungTvClient) Pause() error {
 	return nil
 }
 
-func (s *SamsungTvClient) Play() error  {
+func (s *SamsungTvClient) Play() error {
 	s.Upnp.PlayCurrentMedia()
 	return nil
 }
 
-func (s *SamsungTvClient) Status() (interface{}, error)  {
-    out, err := s.Upnp.GetCurrentMedia()
-    log.Printf("%#v", out)
-    out, err = s.Upnp.GetPositionInfo()
-    log.Printf("%#v", out)
-    return out, err
+func (s *SamsungTvClient) Status() (interface{}, error) {
+	out, err := s.Upnp.GetCurrentMedia()
+	log.Printf("%#v", out)
+	out, err = s.Upnp.GetPositionInfo()
+	log.Printf("%#v", out)
+	return out, err
 }

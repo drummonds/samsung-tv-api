@@ -1,18 +1,19 @@
 package main
 
 import (
-	"fmt"
-	"flag"
-	"log"
+	"github.com/avbdr/samsung-tv-api/pkg/device"
+	samsung_tv_api "github.com/avbdr/samsung-tv-api/pkg/samsung-tv-api"
+	sonos_api "github.com/avbdr/samsung-tv-api/pkg/sonos-api"
+	//"github.com/davecgh/go-spew/spew"
 	"encoding/json"
+	"flag"
+	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"strconv"
-    samsung_tv_api "github.com/avbdr/samsung-tv-api/pkg/samsung-tv-api"
-    sonos_api "github.com/avbdr/samsung-tv-api/pkg/sonos-api"
-    "github.com/avbdr/samsung-tv-api/pkg/device"
-    //"github.com/davecgh/go-spew/spew"
 )
+
 var devices_ []device.DeviceInfo
 
 func zeroconfDisco() {
@@ -41,8 +42,8 @@ func saveConfig() {
 	if err != nil {
 		fmt.Printf("1 %v", err)
 	}
-    homeDir, _ := os.UserHomeDir()
-	err = ioutil.WriteFile(homeDir +"/.samsung.json", configBytes, 0644)
+	homeDir, _ := os.UserHomeDir()
+	err = ioutil.WriteFile(homeDir+"/.samsung.json", configBytes, 0644)
 	if err != nil {
 		fmt.Printf("2 %v", err)
 	}
@@ -50,7 +51,7 @@ func saveConfig() {
 }
 
 func loadConfig() {
-    homeDir, _ := os.UserHomeDir()
+	homeDir, _ := os.UserHomeDir()
 	configData, err := ioutil.ReadFile(homeDir + "/.samsung.json")
 	if err != nil {
 		return
@@ -61,8 +62,7 @@ func loadConfig() {
 	}
 }
 
-
-func main () {
+func main() {
 	deviceId := 0
 	var help bool
 	flag.IntVar(&deviceId, "d", 0, "Speaker id is not defined")
@@ -80,14 +80,14 @@ func main () {
 
 	loadConfig()
 	/*
-	if len(os.Args) == 3 {
-		deviceId = 0 // fixme. find the right tv from the config by name
-		fmt.Printf("TV: %s", os.Args[2])
-	}
+		if len(os.Args) == 3 {
+			deviceId = 0 // fixme. find the right tv from the config by name
+			fmt.Printf("TV: %s", os.Args[2])
+		}
 	*/
 
 	if Args[0] == "devices" {
-	    for id, d := range devices_ {
+		for id, d := range devices_ {
 			fmt.Printf("%d - %s: %s - %s\n", id, d.Type, d.Name, d.Ip)
 		}
 		return
@@ -117,7 +117,7 @@ func main () {
 		devApi.PowerOff()
 		return
 	}
-	
+
 	if Args[0] == "list" {
 		devApi.List()
 		return
@@ -154,7 +154,7 @@ func main () {
 			log.Printf("volume is %d", vol)
 			return
 		}
-		intValue,_ := strconv.Atoi(Args[1])
+		intValue, _ := strconv.Atoi(Args[1])
 		devApi.Vol(intValue)
 		return
 	}

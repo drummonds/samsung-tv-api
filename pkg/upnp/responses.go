@@ -1,4 +1,5 @@
 package upnp
+
 import "encoding/xml"
 
 type GetDeviceVolumeResponse struct {
@@ -22,33 +23,32 @@ type GetCurrentMuteStatusResponse struct {
 }
 
 type GetPositionInfoResponse struct {
-    Envelope struct {
-        Body struct {
+	Envelope struct {
+		Body struct {
 			GetPositionResponse struct {
 				Track         string
 				RelTime       string
 				TrackDuration string
 				TrackMetaData string
-				TrackURI    string
-            } `json:"GetPositionInfoResponse"`
-        } `json:"Body"`
-    } `json:"Envelope"`
-
+				TrackURI      string
+			} `json:"GetPositionInfoResponse"`
+		} `json:"Body"`
+	} `json:"Envelope"`
 }
 
 type upnpDescribeDevice_XML struct {
-    XMLNamespace string                `xml:"xmlns,attr"`
-    Device       []upnpDevice_XML      `xml:"device"`
+	XMLNamespace string           `xml:"xmlns,attr"`
+	Device       []upnpDevice_XML `xml:"device"`
 }
 
 type upnpDevice_XML struct {
-    FriendlyName         string              `xml:"friendlyName"`
-    Manufacturer         string              `xml:"manufacturer"`
-    ModelNumber          string              `xml:"modelNumber"`
-    ModelDescription     string              `xml:"modelDescription"`
-    ModelName            string              `xml:"modelName"`
-    RoomName             string              `xml:"roomName"`
-    MacAddress           string              `xml:"MACAddress"`
+	FriendlyName     string `xml:"friendlyName"`
+	Manufacturer     string `xml:"manufacturer"`
+	ModelNumber      string `xml:"modelNumber"`
+	ModelDescription string `xml:"modelDescription"`
+	ModelName        string `xml:"modelName"`
+	RoomName         string `xml:"roomName"`
+	MacAddress       string `xml:"MACAddress"`
 }
 
 type Item_XML struct {

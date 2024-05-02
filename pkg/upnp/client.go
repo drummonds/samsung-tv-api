@@ -1,21 +1,20 @@
 package upnp
 
 import (
-	"github.com/avbdr/samsung-tv-api/pkg/device"
 	"crypto/tls"
 	"encoding/json"
-    "encoding/xml"
+	"encoding/xml"
 	"fmt"
+	"github.com/avbdr/samsung-tv-api/pkg/device"
 	xj "github.com/basgys/goxml2json"
+	"io/ioutil"
 	"log"
 	"net"
-	"time"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
-    "io/ioutil"
-
+	"time"
 )
 
 // This package covers the support for the Universal Plug & Play (UPNP)
@@ -29,7 +28,7 @@ type UpnpClient struct {
 // output interface.
 //
 // TODO
-// 	* support binding to a non 200 response or determine the error message returned and use it in the error response
+//   - support binding to a non 200 response or determine the error message returned and use it in the error response
 func (s *UpnpClient) makeSoapRequest(action, arguments, protocol string, output interface{}) error {
 	u := s.BaseUrl(protocol + "1").String()
 	fmt.Println(u)
@@ -77,7 +76,7 @@ func (s *UpnpClient) makeSoapRequest(action, arguments, protocol string, output 
 // GetCurrentVolume returns the value of the current volume level
 //
 // TODO
-// 	* This has to been tested with any bad input, should be regarded as not stable.
+//   - This has to been tested with any bad input, should be regarded as not stable.
 func (s *UpnpClient) GetCurrentVolume() (int, error) {
 	log.Println("Get device volume via saop api")
 
@@ -94,7 +93,7 @@ func (s *UpnpClient) GetCurrentVolume() (int, error) {
 // SetVolume will update the current volume of the display to the provided value.
 //
 // TODO
-// 	* This has to been tested with any bad input, should be regarded as not stable.
+//   - This has to been tested with any bad input, should be regarded as not stable.
 func (s *UpnpClient) SetVolume(volume int) error {
 	log.Printf("set the volume of the tv to %d via soap api\n", volume)
 
@@ -107,7 +106,7 @@ func (s *UpnpClient) SetVolume(volume int) error {
 // GetCurrentMuteStatus returns true if and only if the TV is currently muted
 //
 // TODO
-// 	* This has to been tested with any bad input, should be regarded as not stable.
+//   - This has to been tested with any bad input, should be regarded as not stable.
 func (s *UpnpClient) GetCurrentMuteStatus() (bool, error) {
 	log.Println("Get device mute status via saop api")
 
@@ -124,8 +123,8 @@ func (s *UpnpClient) GetCurrentMuteStatus() (bool, error) {
 // SetCurrentMedia will tell the display to play the current media via the URL.
 //
 // TODO
-// 	* This has to been tested with any bad input, should be regarded as not stable.
-// 	* This requires to be tested, it has not been ran to close any applications yet.
+//   - This has to been tested with any bad input, should be regarded as not stable.
+//   - This requires to be tested, it has not been ran to close any applications yet.
 func (s *UpnpClient) SetCurrentMedia(url string) error {
 	args := fmt.Sprintf("<CurrentURI>%s</CurrentURI><CurrentURIMetaData></CurrentURIMetaData>", url)
 
@@ -144,83 +143,79 @@ func (s *UpnpClient) SetCurrentMedia(url string) error {
 // GetCurrentMedia will return the status of the current media playing
 //
 // TODO
-//  * This has to been tested with any bad input, should be regarded as not stable.
-//  * This requires to be tested, it has not been ran to close any applications yet.
+//   - This has to been tested with any bad input, should be regarded as not stable.
+//   - This requires to be tested, it has not been ran to close any applications yet.
 func (s *UpnpClient) GetCurrentMedia() (interface{}, error) {
-    var output interface{}
-    var err error
+	var output interface{}
+	var err error
 
-    err = s.makeSoapRequest("GetTransportInfo", "", "AVTransport", &output)
+	err = s.makeSoapRequest("GetTransportInfo", "", "AVTransport", &output)
 
-    if err != nil {
-        return err, nil
-    }
-    return output, nil
+	if err != nil {
+		return err, nil
+	}
+	return output, nil
 }
 
 // GetPositionInfo will return the status of the current media playing
-func (s *UpnpClient) GetPositionInfo () (map[string]string, error) {
-    var output GetPositionInfoResponse
-    var err error
+func (s *UpnpClient) GetPositionInfo() (map[string]string, error) {
+	var output GetPositionInfoResponse
+	var err error
 
-    err = s.makeSoapRequest("GetPositionInfo", "", "AVTransport", &output)
+	err = s.makeSoapRequest("GetPositionInfo", "", "AVTransport", &output)
 
-    if err != nil {
-        return nil, err
-    }
+	if err != nil {
+		return nil, err
+	}
 
 	didlXml := strings.Replace(output.Envelope.Body.GetPositionResponse.TrackMetaData, "&quot;", "\"", -1)
-    didlXml = strings.Replace(didlXml, "&gt;", ">", -1)
+	didlXml = strings.Replace(didlXml, "&gt;", ">", -1)
 	didlXml = strings.Replace(didlXml, "&lt;", "<", -1)
-	didl :=  new(TrackMetaData_XML)
+	didl := new(TrackMetaData_XML)
 	err = xml.Unmarshal([]byte(didlXml), &didl)
 
 	ret := map[string]string{
-		"Track": output.Envelope.Body.GetPositionResponse.Track,
-		"RelTime": output.Envelope.Body.GetPositionResponse.RelTime,
+		"Track":         output.Envelope.Body.GetPositionResponse.Track,
+		"RelTime":       output.Envelope.Body.GetPositionResponse.RelTime,
 		"TrackDuration": output.Envelope.Body.GetPositionResponse.TrackDuration,
-		"Artist": didl.Item.Creator,
-		"Album": didl.Item.Album,
-		"Cover": didl.Item.AlbumArtUri,
-		"Uri": output.Envelope.Body.GetPositionResponse.TrackURI,
+		"Artist":        didl.Item.Creator,
+		"Album":         didl.Item.Album,
+		"Cover":         didl.Item.AlbumArtUri,
+		"Uri":           output.Envelope.Body.GetPositionResponse.TrackURI,
 	}
 	return ret, nil
 }
 
-
 // PlayCurrentMedia will attempt to play the current media already set on the display.
 //
 // TODO
-// 	* This has to been tested with any bad input, should be regarded as not stable.
-// 	* This requires to be tested, it has not been ran to close any applications yet.
+//   - This has to been tested with any bad input, should be regarded as not stable.
+//   - This requires to be tested, it has not been ran to close any applications yet.
 func (s *UpnpClient) PlayCurrentMedia() error {
 	var output interface{}
 	return s.makeSoapRequest("Play", "<Speed>1</Speed>", "AVTransport", &output)
 }
 
 // Pause will attempt to pause playback.
-//
-func (s *UpnpClient) Pause () error {
+func (s *UpnpClient) Pause() error {
 	var output interface{}
 	err := s.makeSoapRequest("Pause", "<Speed>1</Speed>", "AVTransport", &output)
 	return err
 }
 
 // PlayNext will attempt to play the next media in playlist.
-//
 func (s *UpnpClient) PlayNext() error {
 	var output interface{}
 	return s.makeSoapRequest("Next", "", "AVTransport", &output)
 }
 
 // PlayPrev will attempt to play the next media in playlist.
-//
 func (s *UpnpClient) PlayPrevious() error {
 	var output interface{}
 	return s.makeSoapRequest("Previous", "", "AVTransport", &output)
 }
 
-func toMap(data []byte) (map[string]string) {
+func toMap(data []byte) map[string]string {
 	headers := strings.Split(string(data), "\n")
 	result := make(map[string]string)
 	for _, item := range headers {
@@ -234,7 +229,7 @@ func toMap(data []byte) (map[string]string) {
 	return result
 }
 
-func Discover(filter string, manufacturer string, devType string) ([]device.DeviceInfo) {
+func Discover(filter string, manufacturer string, devType string) []device.DeviceInfo {
 	var found []device.DeviceInfo
 	ssdpAddress := "239.255.255.250:1900"
 
@@ -249,11 +244,11 @@ func Discover(filter string, manufacturer string, devType string) ([]device.Devi
 
 	discoverMessage := []byte(
 		"M-SEARCH * HTTP/1.1\r\n" +
-		"HOST: 239.255.255.250:1900\r\n" +
-		"MAN: \"ssdp:discover\"\r\n" +
-		"MX: 1\r\n" +
-		"ST: ssdp:all\r\n" +
-		"\r\n",
+			"HOST: 239.255.255.250:1900\r\n" +
+			"MAN: \"ssdp:discover\"\r\n" +
+			"MX: 1\r\n" +
+			"ST: ssdp:all\r\n" +
+			"\r\n",
 	)
 	_, err = conn.WriteToUDP(discoverMessage, udpAddr)
 	if err != nil {
@@ -275,46 +270,45 @@ func Discover(filter string, manufacturer string, devType string) ([]device.Devi
 		if data["ST"] != filter {
 			continue
 		}
-		if data["LOCATION"]== "" {
+		if data["LOCATION"] == "" {
 			continue
 		}
-        parsedURL, _ := url.Parse(data["LOCATION"])
-        props,err := DeviceProperties(data["LOCATION"])
-        if err != nil {
+		parsedURL, _ := url.Parse(data["LOCATION"])
+		props, err := DeviceProperties(data["LOCATION"])
+		if err != nil {
 			log.Printf("%v", err)
-            continue
-        }
+			continue
+		}
 		if props.Manufacturer != manufacturer {
 			continue
 		}
 
 		d := device.DeviceInfo{
-			Ip: parsedURL.Hostname(),
+			Ip:   parsedURL.Hostname(),
 			Type: devType,
-			Mac: props.MacAddress,
+			Mac:  props.MacAddress,
 		}
 
 		d.Name = props.FriendlyName
 		if props.RoomName != "" {
 			d.Name = props.RoomName
 		}
-        found = append(found, d)
+		found = append(found, d)
 	}
 	return found
 }
 
-
 func DeviceProperties(url string) (upnpDevice_XML, error) {
-    resp, err := http.Get(url)
-    if err != nil {
-        return upnpDevice_XML{}, err
-    }
-    defer resp.Body.Close()
-    
-    var result upnpDescribeDevice_XML
-    if body, err := ioutil.ReadAll(resp.Body); nil == err {
-        xml.Unmarshal(body, &result)
-        return result.Device[0], nil
-    }
-    return upnpDevice_XML{}, err
+	resp, err := http.Get(url)
+	if err != nil {
+		return upnpDevice_XML{}, err
+	}
+	defer resp.Body.Close()
+
+	var result upnpDescribeDevice_XML
+	if body, err := ioutil.ReadAll(resp.Body); nil == err {
+		xml.Unmarshal(body, &result)
+		return result.Device[0], nil
+	}
+	return upnpDevice_XML{}, err
 }
