@@ -1,82 +1,44 @@
 package main
 
 import (
-	"context"
-	"time"
-	"github.com/grandcat/zeroconf"
 	"fmt"
+	"flag"
 	"log"
 	"encoding/json"
-	"encoding/base64"
 	"io/ioutil"
 	"os"
 	"strconv"
-	"strings"
     samsung_tv_api "github.com/avbdr/samsung-tv-api/pkg/samsung-tv-api"
-    "github.com/davecgh/go-spew/spew"
+    sonos_api "github.com/avbdr/samsung-tv-api/pkg/sonos-api"
+    "github.com/avbdr/samsung-tv-api/pkg/device"
+    //"github.com/davecgh/go-spew/spew"
 )
-
-type Device struct {
-	Name string `json:"name"`
-	Mac string `json:"mac"`
-	Ip string `json:"ip"`
-	Token string `json:"token,omitempty"`
-	Api *samsung_tv_api.SamsungTvClient `json:"-"`
-}
-var devices_ []Device
-
-
-func toMap(data []string) (map[string]string) {
-	result := make(map[string]string)
-	for _, item := range data {
-		item = strings.Trim(item, "\"")
-		parts := strings.SplitN(item, "=", 2)
-		if len(parts) != 2 {
-			continue
-		}
-		result[parts[0]] = parts[1]
-	}
-	return result
-}
+var devices_ []device.DeviceInfo
 
 func zeroconfDisco() {
-	serviceType := "_airplay._tcp"
-	domain := "local."
-	timeout := 1 * time.Second
-
-	resolver, err := zeroconf.NewResolver(nil)
-	if err != nil {
-		fmt.Println("Failed to initialize resolver:", err.Error())
-		return
-	}
-
-	entries := make(chan *zeroconf.ServiceEntry)
-	go func(d <-chan *zeroconf.ServiceEntry) {
-
-		for device := range d {
-			deviceMap := toMap(device.Text)
-			if deviceMap["manufacturer"] != "Samsung" {
-				continue
-			}
-			spew.Dump(device)
-			tv := Device{
-				Name: device.Instance,
-				Mac: deviceMap["deviceid"],
-				Ip: device.AddrIPv4[0].String(),
-				Token: "",
-			}
-			devices_ = append(devices_, tv)
+	samsungs := samsung_tv_api.Discover()
+	for _, dev := range samsungs {
+		tv := device.DeviceInfo{
+			Name: dev["name"],
+			Mac: "",
+			Ip: dev["ip"],
+			Token: "",
+			Type: dev["type"],
 		}
-	}(entries)
-
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	err = resolver.Browse(ctx, serviceType, domain, entries)
-	if err != nil {
-		fmt.Println("Failed to browse:", err.Error())
-		return
+		devices_ = append(devices_, tv)
 	}
-	<-ctx.Done()
+
+	sonosDevs := sonos_api.Discover()
+	for _, dev := range sonosDevs {
+		tv := device.DeviceInfo{
+			Name: dev["name"],
+			Mac: "",
+			Ip: dev["ip"],
+			Token: "",
+			Type: dev["type"],
+		}
+		devices_ = append(devices_, tv)
+	}
 }
 
 func saveConfig() {
@@ -87,7 +49,6 @@ func saveConfig() {
 	if err != nil {
 		fmt.Printf("1 %v", err)
 	}
-	fmt.Println(string(configBytes))
     homeDir, _ := os.UserHomeDir()
 	err = ioutil.WriteFile(homeDir +"/.samsung.json", configBytes, 0644)
 	if err != nil {
@@ -110,11 +71,20 @@ func loadConfig() {
 
 
 func main () {
-	var tv Device
-	deviceId := 0 
+	deviceId := 0
+	var help bool
+	flag.IntVar(&deviceId, "d", 0, "Speaker id is not defined")
+	flag.BoolVar(&help, "help", false, "Help")
+	flag.Parse()
+	Args := flag.Args()
+
 	if len(os.Args) == 1 {
+		help = true
+	}
+	if help {
+		flag.PrintDefaults()
 		return
-    }
+	}
 
 	loadConfig()
 	/*
@@ -124,114 +94,113 @@ func main () {
 	}
 	*/
 
-	if os.Args[1] == "discover" {
+	if Args[0] == "discover" {
 		zeroconfDisco()
 		saveConfig()
 		return
 	}
 
+	var tv device.DeviceInfo
 	tv = devices_[deviceId]
-
-	tv.Api = samsung_tv_api.NewSamsungTvWebSocket(tv.Ip, tv.Token, 8002, 2, "RoomAI Remote", false)
-	tv.Api.Mac = tv.Mac
-	tv.Api.PowerOn()
-	tv.Api.ConnectionSetup()
-	tv.Api.Websocket.WaitFor("ms.channel.connect")
-
-	if tv.Token == "" {
-		devices_[deviceId].Token = tv.Api.GetToken()
-		deviceInfo, deviceInfoErr := tv.Api.Rest.GetDeviceInfo()
-		if deviceInfoErr == nil && deviceInfo.Device.NetworkType == "wireless" {
-			devices_[deviceId].Mac = deviceInfo.Device.WifiMac
-		}
+	log.Printf("Device: %#v", tv)
+	var devApi device.Device
+	if tv.Type == "samsungtv" {
+		devApi = samsung_tv_api.NewSamsungTvWebSocket(&devices_[deviceId], 0, false)
+		devApi.Init()
 		saveConfig()
+	} else if tv.Type == "sonos" {
+		devApi = sonos_api.NewSonosDevice(tv.Ip)
+	} else {
+		log.Printf("Error: unsupported device type: %s", tv.Type)
+		return
 	}
 
-	if tv.Api == nil {
-		log.Printf("tv is off")
-		return
-    }
-
-	if os.Args[1] == "poweroff" {
-		tv.Api.PowerOff()
+	if Args[0] == "poweroff" {
+		devApi.PowerOff()
 		return
 	}
 	
-	if os.Args[1] == "list" {
-		apps, _ := tv.Api.Websocket.GetApplicationsList()
-		for _, app := range apps.Data.Applications {
-			log.Printf("%s - %s", app.AppID, app.Name)
-		}
+	if Args[0] == "list" {
+		devApi.List()
 		return
 	}
 
-	if os.Args[1] == "open" {
-		if len(os.Args) != 3 {
+	if Args[0] == "open" {
+		if flag.NArg() != 2 {
+			log.Fatal("no url or app specified")
+		}
+		devApi.Open(Args[1])
+		return
+	}
+	if Args[0] == "key" {
+		if flag.NArg() != 2 {
 			log.Fatal("no key specified")
 		}
-		if strings.HasPrefix(os.Args[2], "http") {
-			tv.Api.Websocket.OpenBrowser(os.Args[2])
-		} else {
-			tv.Api.Rest.RunApplication(os.Args[2])
-		}
+		devApi.Key(Args[1])
 		return
 	}
-	if os.Args[1] == "key" {
-		if len(os.Args) != 3 {
-			log.Fatal("no key specified")
-		}
-		tv.Api.Websocket.SendClick(os.Args[2])
-		return
-	}
-	if os.Args[1] == "volup" {
-		tv.Api.Websocket.SendClick("KEY_VOLUP")
+	if Args[0] == "volup" {
+		devApi.VolUp()
 		return
 	}
 
-	if os.Args[1] == "voldown" {
-		tv.Api.Websocket.SendClick("KEY_VOLDOWN")
+	if Args[0] == "voldown" {
+		devApi.VolDown()
 		return
 	}
 
-	if os.Args[1] == "vol" {
-		if len(os.Args) != 3 {
-			vol, _ := tv.Api.Upnp.GetCurrentVolume()
+	if Args[0] == "vol" {
+		log.Printf("%d", flag.NArg())
+		if flag.NArg() != 2 {
+			vol, _ := devApi.Vol(-1)
 			log.Printf("volume is %d", vol)
 			return
 		}
-		intValue,_ := strconv.Atoi(os.Args[2])
-		tv.Api.Upnp.SetVolume(intValue)
+		intValue,_ := strconv.Atoi(Args[1])
+		devApi.Vol(intValue)
 		return
 	}
 
-	if os.Args[1] == "test" {
-		tv.Api.Websocket.WaitFor("qwesdfsf")
+	if Args[0] == "test" {
+		devApi.Test()
 	}
 
-	if os.Args[1] == "text" {
-		if len(os.Args) != 3 {
+	if Args[0] == "text" {
+		if flag.NArg() != 2 {
 			log.Fatal("no key specified")
 		}
-		tv.Api.Websocket.SendText(base64.StdEncoding.EncodeToString([]byte(os.Args[2])))
+		devApi.Text(Args[1])
 		return
 	}
 
-	if os.Args[1] == "stream" {
+	if Args[0] == "stream" {
 		if len(os.Args) != 3 {
 			log.Fatal("no key specified")
 		}
 		log.Printf("Streaming %s", os.Args[2])
-		tv.Api.Upnp.SetCurrentMedia(os.Args[2])
+		devApi.Stream(os.Args[2])
 		return
 	}
 
-	if os.Args[1] == "info" {
-		deviceInfo, deviceInfoErr := tv.Api.Rest.GetDeviceInfo()
-		if deviceInfoErr != nil {
-			fmt.Printf("error %#v", deviceInfoErr)
-		}
-		spew.Dump("%v", deviceInfo)
-		log.Printf("OS %s", deviceInfo.Device.Os)
+	if Args[0] == "info" {
+//		info, _ = devApi.Info()
+//		spew.Dump(info)
 		return
+	}
+
+	if Args[0] == "next" {
+		devApi.Next()
+	}
+	if Args[0] == "prev" {
+		devApi.Prev()
+	}
+	if Args[0] == "pause" {
+		devApi.Pause()
+	}
+	if Args[0] == "play" {
+		devApi.Play()
+	}
+	if Args[0] == "status" {
+		devApi.Status()
 	}
 }

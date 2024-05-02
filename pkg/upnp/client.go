@@ -6,16 +6,35 @@ import (
 	"fmt"
 	xj "github.com/basgys/goxml2json"
 	"log"
+	"net"
+	"time"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
+    "io/ioutil"
+    "encoding/xml"
 )
 
 // This package covers the support for the Universal Plug & Play (UPNP)
 
 type UpnpClient struct {
 	BaseUrl func(string) *url.URL
+}
+
+type upnpDescribeDevice_XML struct {
+    XMLNamespace string                `xml:"xmlns,attr"`
+    Device       []upnpDevice_XML      `xml:"device"`
+}
+
+type upnpDevice_XML struct {
+    FriendlyName         string              `xml:"friendlyName"`
+    Manufacturer         string              `xml:"manufacturer"`
+    ModelNumber          string              `xml:"modelNumber"`
+    ModelDescription     string              `xml:"modelDescription"`
+    ModelName            string              `xml:"modelName"`
+    RoomName			 string              `xml:"roomName"`
+    MacAddress           string              `xml:"MACAddress"`
 }
 
 // makeSoapRequest will send a API http call (soap) to the given endpoint (base url + protocol).
@@ -135,6 +154,24 @@ func (s *UpnpClient) SetCurrentMedia(url string) error {
 	return s.PlayCurrentMedia()
 }
 
+// GetCurrentMedia will return the status of the current media playing
+//
+// TODO
+//  * This has to been tested with any bad input, should be regarded as not stable.
+//  * This requires to be tested, it has not been ran to close any applications yet.
+func (s *UpnpClient) GetCurrentMedia() error {
+    var output interface{}
+    var err error
+
+    err = s.makeSoapRequest("u:GetTransportInfo", "", "AVTransport", &output)
+
+    if err != nil {
+        return err
+	log.Printf ("%#v", output)
+    }
+    return nil
+}
+
 // PlayCurrentMedia will attempt to play the current media already set on the display.
 //
 // TODO
@@ -143,4 +180,85 @@ func (s *UpnpClient) SetCurrentMedia(url string) error {
 func (s *UpnpClient) PlayCurrentMedia() error {
 	var output interface{}
 	return s.makeSoapRequest("Play", "<Speed>1</Speed>", "AVTransport", &output)
+}
+
+// Pause will attempt to pause playback.
+//
+func (s *UpnpClient) Pause () error {
+	var output interface{}
+	err := s.makeSoapRequest("Pause", "<Speed>1</Speed>", "AVTransport", &output)
+	return err
+}
+
+// PlayNext will attempt to play the next media in playlist.
+//
+func (s *UpnpClient) PlayNext() error {
+	var output interface{}
+	return s.makeSoapRequest("Next", "", "AVTransport", &output)
+}
+
+// PlayPrev will attempt to play the next media in playlist.
+//
+func (s *UpnpClient) PlayPrevious() error {
+	var output interface{}
+	return s.makeSoapRequest("Previous", "", "AVTransport", &output)
+}
+
+func (s *UpnpClient) Discover() {
+	ssdpAddress := "239.255.255.250:1900"
+
+	udpAddr, _ := net.ResolveUDPAddr("udp4", ssdpAddress)
+	conn, err := net.ListenMulticastUDP("udp4", nil, udpAddr)
+	if err != nil {
+		fmt.Println("Error opening UDP connection:", err)
+		return
+	}
+	defer conn.Close()
+	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+
+	discoverMessage := []byte(
+		"M-SEARCH * HTTP/1.1\r\n" +
+		"HOST: 239.255.255.250:1900\r\n" +
+		"MAN: \"ssdp:discover\"\r\n" +
+		"MX: 1\r\n" +
+		"ST: ssdp:all\r\n" +
+		"\r\n",
+	)
+	_, err = conn.WriteToUDP(discoverMessage, udpAddr)
+	if err != nil {
+		fmt.Println("Error sending discover message:", err)
+		return
+	}
+
+	for {
+		buffer := make([]byte, 2048)
+		n, addr, err := conn.ReadFromUDP(buffer)
+		if err != nil {
+			if strings.Contains(err.Error(), "i/o timeout") {
+				fmt.Println("No more responses received.")
+				break
+			}
+			fmt.Println("Error reading from UDP:", err)
+			return
+		}
+		fmt.Printf("Received response from %v:\n%s\n", addr, buffer[:n])
+	}
+}
+
+
+func DeviceProperties(url string) (upnpDevice_XML, error) {
+    log.Printf("getting %s", url)
+    resp, err := http.Get(url)
+    if err != nil {
+        return upnpDevice_XML{}, err
+    }
+    log.Printf("got %v", resp.Body)
+    defer resp.Body.Close()
+    
+    var result upnpDescribeDevice_XML
+    if body, err := ioutil.ReadAll(resp.Body); nil == err {
+        xml.Unmarshal(body, &result)
+        return result.Device[0], nil
+    }
+    return upnpDevice_XML{}, err
 }
