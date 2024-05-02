@@ -200,7 +200,7 @@ func (s *SamsungTvClient) PowerOff () error {
 	return nil
 }
 
-func Discover() ([]map[string]string) {
+func Discover() ([]device.DeviceInfo) {
 	return upnp.Discover("urn:dial-multiscreen-org:service:dial:1", "Samsung Electronics", "samsungtv")
 }
 

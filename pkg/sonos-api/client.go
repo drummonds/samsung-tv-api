@@ -1,6 +1,7 @@
 package sonos
 
 import (
+    "github.com/avbdr/samsung-tv-api/pkg/device"
     "github.com/avbdr/samsung-tv-api/pkg/upnp"
 	"log"
 	"fmt"
@@ -27,7 +28,7 @@ func NewSonosDevice(host string) *SonosClient {
 	return client
 }
 
-func Discover() ([]map[string]string) {
+func Discover() ([]device.DeviceInfo) {
 	return upnp.Discover("urn:schemas-upnp-org:service:MusicServices:1", "Sonos, Inc.", "sonos")
 }
 

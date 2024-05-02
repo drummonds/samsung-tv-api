@@ -1,6 +1,7 @@
 package upnp
 
 import (
+	"github.com/avbdr/samsung-tv-api/pkg/device"
 	"crypto/tls"
 	"encoding/json"
     "encoding/xml"
@@ -233,8 +234,8 @@ func toMap(data []byte) (map[string]string) {
 	return result
 }
 
-func Discover(filter string, manufacturer string, devType string) ([]map[string]string) {
-    found := make([]map[string]string, 0)
+func Discover(filter string, manufacturer string, devType string) ([]device.DeviceInfo) {
+	var found []device.DeviceInfo
 	ssdpAddress := "239.255.255.250:1900"
 
 	udpAddr, _ := net.ResolveUDPAddr("udp4", ssdpAddress)
@@ -286,14 +287,17 @@ func Discover(filter string, manufacturer string, devType string) ([]map[string]
 		if props.Manufacturer != manufacturer {
 			continue
 		}
-        d := make(map[string]string)
-		if props.RoomName != "" {
-			d["name"] = props.RoomName
-		} else {
-			d["name"] = props.FriendlyName
+
+		d := device.DeviceInfo{
+			Ip: parsedURL.Hostname(),
+			Type: devType,
+			Mac: props.MacAddress,
 		}
-        d["ip"] = parsedURL.Hostname()
-        d["type"] = devType 
+
+		d.Name = props.FriendlyName
+		if props.RoomName != "" {
+			d.Name = props.RoomName
+		}
         found = append(found, d)
 	}
 	return found
