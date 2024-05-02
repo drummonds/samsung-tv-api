@@ -8,7 +8,6 @@ import (
 	"github.com/avbdr/samsung-tv-api/pkg/samsung-tv-api/websocket"
 	"github.com/avbdr/samsung-tv-api/pkg/device"
 	"github.com/avbdr/samsung-tv-api/pkg/upnp"
-    "github.com/ianr0bkny/go-sonos/ssdp"
 	"log"
 	"strings"
 	"time"
@@ -202,43 +201,7 @@ func (s *SamsungTvClient) PowerOff () error {
 }
 
 func Discover() ([]map[string]string) {
-	found := make([]map[string]string, 0)
-
-    mgr := ssdp.MakeManager()
-    defer mgr.Close()
-
-    // Discover()
-    //  eth0 := Network device to query for UPnP devices
-    // 11209 := Free local port for discovery replies
-    // false := Do not subscribe for asynchronous updates
-    mgr.Discover("wlp2s0", "11209", false)
-
-    // A map of service keys to minimum required version
-    qry := ssdp.ServiceQueryTerms{
-        ssdp.ServiceKey("dial-multiscreen-org-dial"): -1,
-    }
-
-    // Look for the service keys in qry in the database of discovered devices
-    result := mgr.QueryServices(qry)
-    if dev_list, has := result["dial-multiscreen-org-dial"]; has {
-        for _, dev := range dev_list {
-			if dev.Product() != "Samsung_UPnP_SDK" {
-				continue
-			}
-			parsedURL, _ := url.Parse(string(dev.Location()))
-			props,err := upnp.DeviceProperties(string(dev.Location()))
-			if err != nil {
-				log.Printf("%v", err)
-				continue
-			}
-			d := make(map[string]string)
-			d["name"] = props.FriendlyName
-			d["ip"] = parsedURL.Hostname()
-			d["type"] = "samsungtv"
-			found = append(found, d)
-        }
-    }
-	return found
+	return upnp.Discover("urn:dial-multiscreen-org:service:dial:1", "Samsung Electronics", "samsungtv")
 }
 
 func (s *SamsungTvClient) Init() {

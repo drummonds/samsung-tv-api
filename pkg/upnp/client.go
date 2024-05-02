@@ -219,14 +219,29 @@ func (s *UpnpClient) PlayPrevious() error {
 	return s.makeSoapRequest("Previous", "", "AVTransport", &output)
 }
 
-func (s *UpnpClient) Discover() {
+func toMap(data []byte) (map[string]string) {
+	headers := strings.Split(string(data), "\n")
+	result := make(map[string]string)
+	for _, item := range headers {
+		item = strings.Trim(item, "\"")
+		parts := strings.SplitN(item, ": ", 2)
+		if len(parts) < 2 {
+			continue
+		}
+		result[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
+	}
+	return result
+}
+
+func Discover(filter string, manufacturer string, devType string) ([]map[string]string) {
+    found := make([]map[string]string, 0)
 	ssdpAddress := "239.255.255.250:1900"
 
 	udpAddr, _ := net.ResolveUDPAddr("udp4", ssdpAddress)
 	conn, err := net.ListenMulticastUDP("udp4", nil, udpAddr)
 	if err != nil {
 		fmt.Println("Error opening UDP connection:", err)
-		return
+		return found
 	}
 	defer conn.Close()
 	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
@@ -242,32 +257,54 @@ func (s *UpnpClient) Discover() {
 	_, err = conn.WriteToUDP(discoverMessage, udpAddr)
 	if err != nil {
 		fmt.Println("Error sending discover message:", err)
-		return
+		return found
 	}
 
 	for {
 		buffer := make([]byte, 2048)
-		n, addr, err := conn.ReadFromUDP(buffer)
+		n, _, err := conn.ReadFromUDP(buffer)
 		if err != nil {
 			if strings.Contains(err.Error(), "i/o timeout") {
-				fmt.Println("No more responses received.")
-				break
+				return found
 			}
 			fmt.Println("Error reading from UDP:", err)
-			return
+			return found
 		}
-		fmt.Printf("Received response from %v:\n%s\n", addr, buffer[:n])
+		data := toMap(buffer[:n])
+		if data["ST"] != filter {
+			continue
+		}
+		if data["LOCATION"]== "" {
+			continue
+		}
+        parsedURL, _ := url.Parse(data["LOCATION"])
+        props,err := DeviceProperties(data["LOCATION"])
+        if err != nil {
+			log.Printf("%v", err)
+            continue
+        }
+		if props.Manufacturer != manufacturer {
+			continue
+		}
+        d := make(map[string]string)
+		if props.RoomName != "" {
+			d["name"] = props.RoomName
+		} else {
+			d["name"] = props.FriendlyName
+		}
+        d["ip"] = parsedURL.Hostname()
+        d["type"] = devType 
+        found = append(found, d)
 	}
+	return found
 }
 
 
 func DeviceProperties(url string) (upnpDevice_XML, error) {
-    log.Printf("getting %s", url)
     resp, err := http.Get(url)
     if err != nil {
         return upnpDevice_XML{}, err
     }
-    log.Printf("got %v", resp.Body)
     defer resp.Body.Close()
     
     var result upnpDescribeDevice_XML

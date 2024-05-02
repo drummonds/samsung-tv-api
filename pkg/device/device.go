@@ -30,3 +30,12 @@ type DeviceInfo struct {
 	Type  string `json:"type"`
 	Token string `json:"token,omitempty"`
 }
+
+func Exists (devices []DeviceInfo, dev DeviceInfo) bool {
+	for _, d := range devices {
+		if d.Ip == dev.Ip {
+			return true
+		}
+	}
+	return false
+}

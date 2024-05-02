@@ -25,7 +25,10 @@ func zeroconfDisco() {
 			Token: "",
 			Type: dev["type"],
 		}
-		devices_ = append(devices_, tv)
+		if !device.Exists(devices_, tv) {
+			log.Printf("Found %v\n", dev)
+			devices_ = append(devices_, tv)
+		}
 	}
 
 	sonosDevs := sonos_api.Discover()
@@ -37,7 +40,10 @@ func zeroconfDisco() {
 			Token: "",
 			Type: dev["type"],
 		}
-		devices_ = append(devices_, tv)
+		if !device.Exists(devices_, tv) {
+			log.Printf("Found %v\n", dev)
+			devices_ = append(devices_, tv)
+		}
 	}
 }
 
@@ -94,6 +100,12 @@ func main () {
 	}
 	*/
 
+	if Args[0] == "devices" {
+	    for id, d := range devices_ {
+			fmt.Printf("%d - %s: %s - %s\n", id, d.Type, d.Name, d.Ip)
+		}
+		return
+	}
 	if Args[0] == "discover" {
 		zeroconfDisco()
 		saveConfig()
