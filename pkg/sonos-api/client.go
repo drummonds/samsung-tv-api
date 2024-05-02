@@ -159,7 +159,11 @@ func (c *SonosClient) Play() error  {
 	return nil
 }
 
-func (c *SonosClient) Status() (string, error)  {
-	return "", nil
+func (c *SonosClient) Status() (interface{}, error)  {
+    out, err := c.Upnp.GetCurrentMedia()
+	log.Printf("%#v", out)
+    out, err = c.Upnp.GetPositionInfo()
+	log.Printf("%#v", out)
+    return out, err
 }
 

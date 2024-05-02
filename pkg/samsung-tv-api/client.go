@@ -333,7 +333,10 @@ func (s *SamsungTvClient) Play() error  {
 	return nil
 }
 
-func (s *SamsungTvClient) Status() (string, error)  {
-	s.Upnp.GetCurrentMedia()
-    return "", nil
+func (s *SamsungTvClient) Status() (interface{}, error)  {
+    out, err := s.Upnp.GetCurrentMedia()
+    log.Printf("%#v", out)
+    out, err = s.Upnp.GetPositionInfo()
+    log.Printf("%#v", out)
+    return out, err
 }

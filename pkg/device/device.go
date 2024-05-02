@@ -20,7 +20,7 @@ type Device interface {
     Pause() error
     Play() error
 	GetToken() string
-    Status() (string, error)
+    Status() (interface{}, error)
 }
 
 type DeviceInfo struct {

@@ -182,9 +182,8 @@ func main () {
 		return
 	}
 
-	if Args[0] == "info" {
-//		info, _ = devApi.Info()
-//		spew.Dump(info)
+	if Args[0] == "status" {
+		devApi.Status()
 		return
 	}
 

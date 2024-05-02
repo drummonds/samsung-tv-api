@@ -3,6 +3,7 @@ package upnp
 import (
 	"crypto/tls"
 	"encoding/json"
+    "encoding/xml"
 	"fmt"
 	xj "github.com/basgys/goxml2json"
 	"log"
@@ -13,28 +14,13 @@ import (
 	"strconv"
 	"strings"
     "io/ioutil"
-    "encoding/xml"
+
 )
 
 // This package covers the support for the Universal Plug & Play (UPNP)
 
 type UpnpClient struct {
 	BaseUrl func(string) *url.URL
-}
-
-type upnpDescribeDevice_XML struct {
-    XMLNamespace string                `xml:"xmlns,attr"`
-    Device       []upnpDevice_XML      `xml:"device"`
-}
-
-type upnpDevice_XML struct {
-    FriendlyName         string              `xml:"friendlyName"`
-    Manufacturer         string              `xml:"manufacturer"`
-    ModelNumber          string              `xml:"modelNumber"`
-    ModelDescription     string              `xml:"modelDescription"`
-    ModelName            string              `xml:"modelName"`
-    RoomName			 string              `xml:"roomName"`
-    MacAddress           string              `xml:"MACAddress"`
 }
 
 // makeSoapRequest will send a API http call (soap) to the given endpoint (base url + protocol).
@@ -159,18 +145,47 @@ func (s *UpnpClient) SetCurrentMedia(url string) error {
 // TODO
 //  * This has to been tested with any bad input, should be regarded as not stable.
 //  * This requires to be tested, it has not been ran to close any applications yet.
-func (s *UpnpClient) GetCurrentMedia() error {
+func (s *UpnpClient) GetCurrentMedia() (interface{}, error) {
     var output interface{}
     var err error
 
-    err = s.makeSoapRequest("u:GetTransportInfo", "", "AVTransport", &output)
+    err = s.makeSoapRequest("GetTransportInfo", "", "AVTransport", &output)
 
     if err != nil {
-        return err
-	log.Printf ("%#v", output)
+        return err, nil
     }
-    return nil
+    return output, nil
 }
+
+// GetPositionInfo will return the status of the current media playing
+func (s *UpnpClient) GetPositionInfo () (map[string]string, error) {
+    var output GetPositionInfoResponse
+    var err error
+
+    err = s.makeSoapRequest("GetPositionInfo", "", "AVTransport", &output)
+
+    if err != nil {
+        return nil, err
+    }
+
+	didlXml := strings.Replace(output.Envelope.Body.GetPositionResponse.TrackMetaData, "&quot;", "\"", -1)
+    didlXml = strings.Replace(didlXml, "&gt;", ">", -1)
+	didlXml = strings.Replace(didlXml, "&lt;", "<", -1)
+	didl :=  new(TrackMetaData_XML)
+	err = xml.Unmarshal([]byte(didlXml), &didl)
+
+	ret := map[string]string{
+		"Track": output.Envelope.Body.GetPositionResponse.Track,
+		"RelTime": output.Envelope.Body.GetPositionResponse.RelTime,
+		"TrackDuration": output.Envelope.Body.GetPositionResponse.TrackDuration,
+		"Artist": didl.Item.Creator,
+		"Album": didl.Item.Album,
+		"Cover": didl.Item.AlbumArtUri,
+		"Uri": output.Envelope.Body.GetPositionResponse.TrackURI,
+	}
+	return ret, nil
+}
+
 
 // PlayCurrentMedia will attempt to play the current media already set on the display.
 //
