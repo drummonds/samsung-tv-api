@@ -21,20 +21,8 @@ go get github.com/stephensli/samsung-tv-api@v0.2.1
 config := helpers.LoadConfiguration()
 
 c := samsung_tv_api.NewSamsungTvWebSocket(
-	"IP_ADDRESS_OF_TV",
-	// configuration token used to authorise with the
-	// TV. If not set the device will need to be allowed
-	// via the TV and the token stored for later. 
-	config.Token,
-	// TLS Port
-	8002,
-	// Number of milliseconds between each key press
-	// when sending large amounts of keys at once.
-	2,
-	"REGISTERED_DEVICE_NAME",
-	// automatically attempt to connect to the TV via
-	// the rest and websocket api's to set the token.
-	true)
+	// This has changed see code
+)
 
 deviceInfo, deviceInfoErr := c.Rest.GetDeviceInfo()
 

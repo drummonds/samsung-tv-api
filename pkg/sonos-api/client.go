@@ -2,10 +2,11 @@ package sonos
 
 import (
 	"fmt"
-	"github.com/avbdr/samsung-tv-api/pkg/device"
-	"github.com/avbdr/samsung-tv-api/pkg/upnp"
 	"log"
 	"net/url"
+
+	"github.com/stephensli/samsung-tv-api/pkg/device"
+	"github.com/stephensli/samsung-tv-api/pkg/upnp"
 )
 
 type SonosClient struct {

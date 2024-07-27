@@ -4,14 +4,15 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/avbdr/samsung-tv-api/pkg/samsung-tv-api/keys"
-	"golang.org/x/net/websocket"
 	"log"
 	"net/url"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/stephensli/samsung-tv-api/pkg/samsung-tv-api/keys"
+	"golang.org/x/net/websocket"
 )
 
 type SamsungWebsocket struct {

@@ -1,9 +1,10 @@
 package main
 
 import (
-	"github.com/avbdr/samsung-tv-api/pkg/device"
-	samsung_tv_api "github.com/avbdr/samsung-tv-api/pkg/samsung-tv-api"
-	sonos_api "github.com/avbdr/samsung-tv-api/pkg/sonos-api"
+	"github.com/stephensli/samsung-tv-api/pkg/device"
+	samsung_tv_api "github.com/stephensli/samsung-tv-api/pkg/samsung-tv-api"
+	sonos_api "github.com/stephensli/samsung-tv-api/pkg/sonos-api"
+
 	//"github.com/davecgh/go-spew/spew"
 	"encoding/json"
 	"flag"

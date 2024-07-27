@@ -105,7 +105,7 @@ func (s *SamsungRestClient) RunApplication(appId string) (interface{}, error) {
 		if appDetails.Visible == true {
 			return output, err
 		}
-		log.Printf("%s", appDetails.Running, appDetails.Visible)
+		log.Printf("Running %v Visible %v", appDetails.Running, appDetails.Visible)
 		time.Sleep(2 * time.Second)
 		i++
 	}

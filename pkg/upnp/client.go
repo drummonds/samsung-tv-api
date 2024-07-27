@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
-	"github.com/avbdr/samsung-tv-api/pkg/device"
-	xj "github.com/basgys/goxml2json"
 	"io/ioutil"
 	"log"
 	"net"
@@ -15,6 +13,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	xj "github.com/basgys/goxml2json"
+	"github.com/stephensli/samsung-tv-api/pkg/device"
 )
 
 // This package covers the support for the Universal Plug & Play (UPNP)
@@ -294,8 +295,8 @@ func Discover(filter string, manufacturer string, devType string) []device.Devic
 			d.Name = props.RoomName
 		}
 		found = append(found, d)
+		return found
 	}
-	return found
 }
 
 func DeviceProperties(url string) (upnpDevice_XML, error) {
