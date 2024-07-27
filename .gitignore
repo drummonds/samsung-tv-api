@@ -26,3 +26,9 @@
 # End of https://www.toptal.com/developers/gitignore/api/go
 
 .idea
+
+# VSCode
+.vscode
+
+# Binary artifacts
+cmd/samsungtv-cli/samsungtv-cli

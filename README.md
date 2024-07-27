@@ -7,10 +7,21 @@ This project is a library for remote controlling Samsung televisions via a TCP/I
 It currently supports modern (post-2016) TVs with Ethernet or Wi-Fi connectivity. They should be all models with
 TizenOs.
 
+## drummonds build
+I had previously tried rainu/samsung-remote but the gorilla websockets made connection and then stopped
+working after getting a token due to a crypto problem.  This version uses a different web sockets
+approach which I have just tested working with my TV.
+
+This forked from https://github.com/stephensli/samsung-tv-api and converted to a commandline 
+implementation by https://github.com/avbdr/samsung-tv-api.
+
+I have added a ipaddress command so that you can directly create the config file if you know the 
+IP address.  The multicast discovery does not work for WSL clients simply.
+
 ## Install
 
 ```bash
-go get github.com/stephensli/samsung-tv-api@v0.2.1
+go get github.com/drummonds/samsung-tv-api@v0.2.1
 ```
 
 ## Usage
