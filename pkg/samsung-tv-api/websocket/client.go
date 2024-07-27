@@ -4,10 +4,9 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/stephensli/samsung-tv-api/pkg/samsung-tv-api/keys"
+	"github.com/avbdr/samsung-tv-api/pkg/samsung-tv-api/keys"
 	"golang.org/x/net/websocket"
 	"log"
-	"net"
 	"net/url"
 	"strings"
 	"sync"
@@ -48,7 +47,6 @@ func (s *SamsungWebsocket) OpenConnection() (*ConnectionResponse, error) {
 
 	config, _ := websocket.NewConfig(u, origin)
 	config.TlsConfig = &tls.Config{InsecureSkipVerify: true}
-	config.Dialer = &net.Dialer{Timeout: time.Millisecond * 200}
 
 	ws, err := websocket.DialConfig(config)
 
@@ -62,6 +60,39 @@ func (s *SamsungWebsocket) OpenConnection() (*ConnectionResponse, error) {
 	readErr := s.readJSON(&val)
 
 	return &val, readErr
+}
+
+func (s *SamsungWebsocket) WaitFor(event string) {
+	fmt.Println("Waiting for ", event)
+	origin := "http://localhost/"
+	u := s.BaseUrl("samsung.remote.control").String()
+
+	config, _ := websocket.NewConfig(u, origin)
+	config.TlsConfig = &tls.Config{InsecureSkipVerify: true}
+
+	var ws *websocket.Conn
+	var err error
+
+	for {
+		ws, err = websocket.DialConfig(config)
+		if err == nil {
+			break
+		}
+	}
+	defer ws.Close()
+
+	for {
+		var message string
+		if err := websocket.Message.Receive(ws, &message); err != nil {
+			log.Println("Error reading message:", err)
+			break
+		}
+		// Log the received message
+		log.Println("Received message:", message)
+		if strings.Contains(message, event) {
+			return
+		}
+	}
 }
 
 // sendJSONReceiveJSON will attempt to first send the command to the websocket server (TV)
@@ -84,7 +115,6 @@ func (s *SamsungWebsocket) sendJSONReceiveJSON(command interface{}, output inter
 	if err != nil {
 		return err
 	}
-
 	return s.readJSON(output)
 }
 
@@ -156,17 +186,23 @@ func (s *SamsungWebsocket) GetApplicationsList() (ApplicationsResponse, error) {
 		},
 	}
 
-	err := s.sendJSONReceiveJSON(req, &output)
-
-	return output, err
+	for {
+		err := s.sendJSONReceiveJSON(req, &output)
+		if err != nil {
+			return output, err
+		}
+		if output.Event == "ed.installedApp.get" {
+			return output, err
+		}
+	}
 }
 
 // RunApplication will tell the TV via the web socket api to run a given application
 // by using the provided application id.
 //
 // TODO
-// 	* This requires to be tested, it has not been ran to close any applications yet.
-// 	* This has to been tested with any bad input, should be regarded as not stable.
+//   - This requires to be tested, it has not been ran to close any applications yet.
+//   - This has to been tested with any bad input, should be regarded as not stable.
 func (s *SamsungWebsocket) RunApplication(appId, appType, metaTag string) error {
 	log.Printf("Running application %s via ws api\n", appId)
 
@@ -195,7 +231,7 @@ func (s *SamsungWebsocket) RunApplication(appId, appType, metaTag string) error 
 // SendClick will command the TV to perform a click on a given key.
 //
 // TODO
-// 	* This has to been tested with any bad input, should be regarded as not stable.
+//   - This has to been tested with any bad input, should be regarded as not stable.
 func (s *SamsungWebsocket) SendClick(key string) error {
 	return s.SendKey(key, 1, "Click")
 }
@@ -204,7 +240,7 @@ func (s *SamsungWebsocket) SendClick(key string) error {
 // could include bing a click.
 //
 // TODO
-// 	* This has to been tested with any bad input, should be regarded as not stable.
+//   - This has to been tested with any bad input, should be regarded as not stable.
 func (s *SamsungWebsocket) SendKey(key string, times int, cmd string) error {
 
 	if cmd == "" {
@@ -238,12 +274,32 @@ func (s *SamsungWebsocket) SendKey(key string, times int, cmd string) error {
 	return nil
 }
 
+func (s *SamsungWebsocket) SendText(text string) error {
+	log.Printf("Sending text %s via ws api\n", text)
+	var req = Request{
+		Method: "ms.remote.control",
+		Params: map[string]interface{}{
+			"Cmd":          text,
+			"DataOfCmd":    "base64",
+			"TypeOfRemote": "SendInputString",
+		},
+	}
+
+	err := s.sendJSON(req)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // HoldKey will command the TV to press a given key and then wait the provided
 // seconds until commanding the TV to release that given key again.
 //
 // TODO
-// 	* This requires to be tested, it has not been ran to close any applications yet.
-// 	* This has to been tested with any bad input, should be regarded as not stable.
+//   - This requires to be tested, it has not been ran to close any applications yet.
+//   - This has to been tested with any bad input, should be regarded as not stable.
 func (s *SamsungWebsocket) HoldKey(key string, seconds int) error {
 	log.Printf("Sending hold key %s for %d seconds via ws api\n", key, seconds)
 
@@ -269,7 +325,7 @@ func (s *SamsungWebsocket) HoldKey(key string, seconds int) error {
 // send these key presses to the TV. Ensuring to send enter after completion.
 //
 // TODO
-// 	* This has to been tested with any bad input, should be regarded as not stable.
+//   - This has to been tested with any bad input, should be regarded as not stable.
 func (s *SamsungWebsocket) ChangeChannel(channel string) error {
 	split := strings.Split(channel, "")
 
@@ -287,8 +343,8 @@ func (s *SamsungWebsocket) ChangeChannel(channel string) error {
 // over the provided duration.
 //
 // TODO
-// 	* This requires to be tested, it has not been ran to close any applications yet.
-// 	* This has to been tested with any bad input, should be regarded as not stable.
+//   - This requires to be tested, it has not been ran to close any applications yet.
+//   - This has to been tested with any bad input, should be regarded as not stable.
 func (s *SamsungWebsocket) MoveCursor(x, y, duration int) error {
 	log.Printf("Sending move Cursor to x: %d, y: %d for duration %d via ws api\n", x, y, duration)
 
@@ -311,37 +367,11 @@ func (s *SamsungWebsocket) MoveCursor(x, y, duration int) error {
 // OpenBrowser will command the TV to open a given URL within the browser.
 //
 // TODO
-// 	* This requires to be tested, it has not been ran to close any applications yet.
-// 	* This has to been tested with any bad input, should be regarded as not stable.
+//   - This requires to be tested, it has not been ran to close any applications yet.
+//   - This has to been tested with any bad input, should be regarded as not stable.
 func (s *SamsungWebsocket) OpenBrowser(url string) error {
 	log.Printf("opening browser to url: %s via ws api\n", url)
 	return s.RunApplication("org.tizen.browser", "NATIVE_LAUNCH", url)
-}
-
-// Power will send the keys.Power key which will attempt to turn off or on
-//
-// TODO
-// 	* This requires to be tested, it has not been ran to close any applications yet.
-func (s *SamsungWebsocket) Power() error {
-	return s.SendClick(keys.Power)
-}
-
-// PowerOff will send the keys.PowerOff key which will attempt to turn off
-// the TV if and only if its on on and a legacy TV. Otherwise, use Power Toggle.
-//
-// TODO
-// 	* This requires to be tested, it has not been ran to close any applications yet.
-func (s *SamsungWebsocket) PowerOff() error {
-	return s.SendClick(keys.PowerOff)
-}
-
-// PowerOn will send the keys.PowerOn key which will attempt to turn on
-// the TV if and only if its on standby and a legacy TV. Otherwise, use Power Toggle.
-//
-// TODO
-// 	* This requires to be tested, it has not been ran to close any applications yet.
-func (s *SamsungWebsocket) PowerOn() error {
-	return s.SendClick(keys.PowerOn)
 }
 
 func (s *SamsungWebsocket) Disconnect() error {

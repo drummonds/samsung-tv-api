@@ -24,6 +24,10 @@ KEY_SVIDEO1|SVideo1
 KEY_SVIDEO2|SVideo2
 KEY_SVIDEO3|SVideo3
 KEY_HDMI|HDMI
+KEY_HDMI1|HDMI1
+KEY_HDMI2|HDMI2
+KEY_HDMI3|HDMI3
+KEY_HDMI4|HDMI4
 KEY_FM_RADIO|FMRadio
 KEY_DVI|DVI
 KEY_DVR|DVR
@@ -355,3 +359,7 @@ Please note that some codes are different on the 2016+ TVs. For example, `KEY_PO
 ----------------
 
 The code list has been extracted from: https://github.com/kdschlosser/samsungctl
+
+https://gist.githubusercontent.com/freman/8d98742de09d476c4d3d9e5d55f9db63/raw/f44d78fe76322d0d0f98d27de5adc0ecdeb6dfb9/login.go
+discussions https://github.com/Ape/samsungctl/issues/75
+more info to pull from https://github.com/rainu/samsung-remote

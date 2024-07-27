@@ -57,9 +57,11 @@ if updatedToken != "" && updatedToken != config.Token {
 ### Toggle Power
 
 ```go 
-if err := c.Websocket.Power(); err != nil {
+if err := c.PowerOn(); err != nil {
 	log.Fatalln(err)
 }
+
+c.PowerOff()
 ```
 
 ### Open Browser
@@ -136,15 +138,18 @@ if err := samsung_tv_api.WakeOnLan(config.Mac); err == nil {
 	* SendClick(key string) error
 	* SendKey(key string, times int, cmd string) error
 	* HoldKey(key string, seconds int) error
+	* SendText(text string) error
 	* ChangeChannel(channel string) error
 	* MoveCursor(x, y, duration int) error
 	* OpenBrowser(url string) error
+	* SendText(text string) error
 	* Power() error
 	* PowerOff() error
 	* PowerOn() error
 	* Disconnect() error
+	* WaitFor(str string) error
 
-### UpNp
+### Upnp
 	* GetCurrentVolume() (int, error)
 	* SetVolume(volume int) error 
 	* GetCurrentMuteStatus() (bool, error) 

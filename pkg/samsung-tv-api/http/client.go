@@ -20,7 +20,7 @@ type SamsungRestClient struct {
 // based on the given method. output will be the binding JSON output of the request.
 //
 // TODO
-// 	* support binding to a non 200 response or determine the error message returned and use it in the error response
+//   - support binding to a non 200 response or determine the error message returned and use it in the error response
 func (s *SamsungRestClient) makeRestRequest(endpoint, method string, output interface{}) error {
 	u := s.BaseUrl(endpoint).String()
 
@@ -56,7 +56,7 @@ func (s *SamsungRestClient) makeRestRequest(endpoint, method string, output inte
 // GetDeviceInfo returns the related Tv information via the rest api
 //
 // TODO
-// 	* This has to been tested with any bad input, should be regarded as not stable.
+//   - This has to been tested with any bad input, should be regarded as not stable.
 func (s *SamsungRestClient) GetDeviceInfo() (DeviceResponse, error) {
 	log.Println("Get device info via rest api")
 
@@ -70,7 +70,7 @@ func (s *SamsungRestClient) GetDeviceInfo() (DeviceResponse, error) {
 // It will use the provided application id to send via the rest api.
 //
 // TODO
-// 	* This has to been tested with any bad input, should be regarded as not stable.
+//   - This has to been tested with any bad input, should be regarded as not stable.
 func (s *SamsungRestClient) GetApplicationStatus(appId string) (ApplicationResponse, error) {
 	log.Println("Getting applications info via rest api")
 
@@ -84,22 +84,39 @@ func (s *SamsungRestClient) GetApplicationStatus(appId string) (ApplicationRespo
 // by using the provided application id.
 //
 // TODO
-// 	* This has to been tested with any bad input, should be regarded as not stable.
+//   - This has to been tested with any bad input, should be regarded as not stable.
 func (s *SamsungRestClient) RunApplication(appId string) (interface{}, error) {
 	log.Println("Run application via rest api")
 
 	var output interface{}
 	err := s.makeRestRequest(fmt.Sprintf("applications/%s", appId), "post", &output)
-
-	return output, err
+	if err != nil {
+		return output, err
+	}
+	// start watchdog to make sure that app actually has started
+	i := 0
+	for {
+		if i > 10 {
+			// execute app one more time as a last resort
+			err := s.makeRestRequest(fmt.Sprintf("applications/%s", appId), "post", &output)
+			return output, err
+		}
+		appDetails, _ := s.GetApplicationStatus(appId)
+		if appDetails.Visible == true {
+			return output, err
+		}
+		log.Printf("%s", appDetails.Running, appDetails.Visible)
+		time.Sleep(2 * time.Second)
+		i++
+	}
 }
 
 // CloseApplication will tell the TV via the rest api to close a given application
 // by using the provided application id.
 //
 // TODO
-// 	* This requires to be tested, it has not been ran to close any applications yet.
-// 	* This has to been tested with any bad input, should be regarded as not stable.
+//   - This requires to be tested, it has not been ran to close any applications yet.
+//   - This has to been tested with any bad input, should be regarded as not stable.
 func (s *SamsungRestClient) CloseApplication(appId string) (interface{}, error) {
 	log.Println("Close application via rest api")
 
@@ -113,8 +130,8 @@ func (s *SamsungRestClient) CloseApplication(appId string) (interface{}, error) 
 // by using the provided application id.
 //
 // TODO
-// 	* This requires to be tested, it has not been ran to install any applications yet.
-// 	* This has to been tested with any bad input, should be regarded as not stable.
+//   - This requires to be tested, it has not been ran to install any applications yet.
+//   - This has to been tested with any bad input, should be regarded as not stable.
 func (s *SamsungRestClient) InstallApplication(appId string) (interface{}, error) {
 	log.Println("Install application via rest api")
 
